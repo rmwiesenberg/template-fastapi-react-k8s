@@ -1,0 +1,75 @@
+{
+  "name": "template",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "npm": ">=8.0.0 <9.0.0",
+    "node": ">=20.0.0 <21.0.0"
+  },
+  "dependencies": {
+    "@types/node": "^22.2.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "axios": "^1.7.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-scripts": "5.0.1",
+    "typescript": "^5.5.4",
+    "web-vitals": "^2.1.0"
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@babel/preset-env": "^7.25.3",
+    "@babel/preset-react": "^7.24.7",
+    "@babel/preset-typescript": "^7.24.7",
+    "@eslint/js": "^9.9.0",
+    "@jest/globals": "^29.7.0",
+    "@testing-library/jest-dom": "^6.4.8",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/eslint__js": "^8.42.3",
+    "@types/jest": "^29.5.12",
+    "@types/react-test-renderer": "^18.3.0",
+    "babel-jest": "^29.7.0",
+    "eslint": "^9.9.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-react-app": "^7.0.1",
+    "jest": "^29.7.0",
+    "json-schema-to-typescript": "^15.0.0",
+    "prettier": "^3.3.3",
+    "react-test-renderer": "^18.3.1",
+    "ts-jest": "^29.2.4",
+    "typescript-eslint": "^8.0.1"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "gen-model": "json2ts -i ../model.schema.json -o src/model.d.ts"
+  },
+  "jest": {
+    "transformIgnorePatterns": [
+      "node_modules/(?!@ngrx|(?!deck.gl)|ng-dynamic)"
+    ]
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest",
+      "prettier"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

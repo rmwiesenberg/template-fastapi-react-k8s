@@ -1,0 +1,11 @@
+{
+  "properties": {
+    "msg": {
+      "default": "",
+      "title": "Msg",
+      "type": "string"
+    }
+  },
+  "title": "MyModel",
+  "type": "object"
+}

@@ -1,0 +1,189 @@
+name: deploy
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+on:
+  push:
+    branches: [ "main" ]
+    # Publish semver tags as releases.
+    tags: [ 'v*.*.*' ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  # Use docker.io for Docker Hub if empty
+  REGISTRY: docker.io
+  DOCKER_USER: me
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: ${{ github.repository }}
+  # k8s config settings
+  CLUSTER_URL: "https://cluster.template.com:16443"
+  CLUSTER_NAME: "microk8s"
+  SECRET_NAME: "template-secret"
+
+jobs:
+  docker-build-maybe-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      # This is used to complete the identity challenge
+      # with sigstore/fulcio when running outside of PRs.
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: set version file
+        if: ${{ github.event_name != 'pull_request' }}
+        run: echo -n ${{ github.ref_name }} > VERSION
+
+      # Install the cosign tool except on PR
+      # https://github.com/sigstore/cosign-installer
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 #v3.5.0
+        with:
+          cosign-release: 'v2.2.4'
+
+      # Set up BuildKit Docker container builder to be able to build
+      # multi-platform images and export cache
+      # https://github.com/docker/setup-buildx-action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
+
+      # Login against a Docker registry except on PR
+      # https://github.com/docker/login-action
+      - name: Log into registry ${{ env.REGISTRY }}
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      # Extract metadata (tags, labels) for Docker
+      # https://github.com/docker/metadata-action
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=auto
+
+      # Build and push Docker image with Buildx (don't push on PR)
+      # https://github.com/docker/build-push-action
+      - name: Build and push Docker image
+        id: build-and-push
+        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Sign the resulting Docker image digest except on PRs.
+      # This will only write to the public Rekor transparency log when the Docker
+      # repository is public to avoid leaking data.  If you would like to publish
+      # transparency data even for private images, pass --force to cosign below.
+      # https://github.com/sigstore/cosign
+      - name: Sign the published Docker image
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
+          TAGS: ${{ steps.meta.outputs.tags }}
+          DIGEST: ${{ steps.build-and-push.outputs.digest }}
+        # This step uses the identity token to provision an ephemeral certificate
+        # against the sigstore community Fulcio instance.
+        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
+
+      - name: upload k8s configs
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: k8s
+          path: k8s
+
+  react-build-maybe-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+      - name: yarn install
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: install
+          dir: web
+      - name: yarn build
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: build
+          dir: web
+      - name: upload webpage
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/build
+
+  maybe-deploy-k8s:
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    needs: [ docker-build-maybe-push, react-build-maybe-push ]
+    runs-on: ubuntu-latest
+
+    # Grant GITHUB_TOKEN the permissions required to make a k8s deployment
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: azure/setup-kubectl@v4
+        id: install
+
+      - name: get k8s context
+        uses: azure/k8s-set-context@v3
+        with:
+          method: service-account
+          k8s-url: ${{ env.CLUSTER_URL }}
+          k8s-secret: ${{ secrets.K8S_SECRET }}
+
+      - name: download k8s configs
+        uses: actions/download-artifact@v4
+        with:
+          name: k8s
+          path: k8s
+
+      - name: deploy to k8s
+        uses: Azure/k8s-deploy@v4
+        with:
+          action: deploy
+          manifests: k8s
+          images: ${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+
+  maybe-deploy-page:
+    needs: [ react-build-maybe-push, maybe-deploy-k8s ]
+    runs-on: ubuntu-latest
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+

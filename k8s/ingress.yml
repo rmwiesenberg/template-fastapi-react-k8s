@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: template-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: lets-encrypt
+spec:
+  tls:
+    - hosts:
+        - api.template.com
+      secretName: lets-encrypt-private-key
+  rules:
+    - host: api.template.com
+      http:
+        paths:
+          - backend:
+              service:
+                name: template-service
+                port:
+                  number: 80
+            path: /
+            pathType: Prefix

@@ -1,0 +1,5 @@
+[flake8]
+exclude = .git,__pycache__,docs/source/conf.py,old,build,dist,node_modules
+max-complexity = 10
+# match black line length
+max-line-length = 88

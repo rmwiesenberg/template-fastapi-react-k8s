@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
-from api.model import MyModel
+from template.model import MyModel
 
 THIS_DIR = Path(__file__).absolute().parent
 VERSION_FILE = THIS_DIR.parent / "VERSION"

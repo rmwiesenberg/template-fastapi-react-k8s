@@ -5,7 +5,7 @@ from typing import Union
 
 from pydantic import BaseModel, TypeAdapter
 
-from api import model
+from template import model
 
 THIS_DIR = Path(__file__).absolute().parent
 DEFAULT_OUTPUT_FILE = THIS_DIR.parent / "model.schema.json"

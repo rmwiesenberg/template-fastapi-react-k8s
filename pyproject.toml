@@ -1,5 +1,6 @@
 [tool.poetry]
-name = "api"
+name = "template"
+package-mode = false
 version = "0.1.0"
 description = ""
 authors = ["Ryan Wiesenberg <me@rwies.com>"]
@@ -18,7 +19,6 @@ pytest = "^8.3.2"
 isort = "^5.13.2"
 
 [tool.poetry.scripts]
-server = "api.main:run"
 gen-model = "scripts.gen_model_schema:main"
 
 [tool.isort]

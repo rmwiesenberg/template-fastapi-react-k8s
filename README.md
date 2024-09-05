@@ -4,7 +4,7 @@ Template repo for FastAPI + React with auto-generation of Typescript models from
 build, and deploy to a locally-managed k8s instance and GitHub Pages simultaneously.
 
 This template is python-first, meaning most api/control decisions are populated from the backend first, and then
-recreated on the front-end. Namely by creating the model definition first in [api/model](api/model.py) and then running
+recreated on the front-end. Namely by creating the model definition first in [api/model](template/model.py) and then running
 the model generation scripts to provide the same structure to the front-end.
 
 ## Structure and Layout
@@ -14,8 +14,9 @@ sub-directories and files:
 
 ```
 [Development]
-- api/          > underlying model/fast api code
+- api/          > fastapi code
 - scripts/      > python scripts external to the api
+- template/     > core logic and model for the api
 - tests/        > tests for the api or scripts 
 - web/          > react-based single-page web app
 
@@ -56,6 +57,6 @@ Replace urls (`XXXX.template.com`) in api and web with your url for web and k8s 
 2. Translate schema to TypeScript (in `web/`): `yarn run gen-model`
 
 ### Local development
-- run api: `poetry run fastapi dev api.main.py`
+- run api (in `api/`): `poetry run fastapi dev`
 - run web (in `web/`): `yarn run start`
   - `REACT_APP_API_URL=http://localhost:8000`
